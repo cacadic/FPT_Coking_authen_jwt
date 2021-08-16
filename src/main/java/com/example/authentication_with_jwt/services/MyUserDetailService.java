@@ -48,7 +48,7 @@ public class MyUserDetailService implements UserDetailsService {
         }
     }
 
-    public UserDetails signUp(String username, String password, Address address) {
+    public CustomUserDetails signUp(String username, String password, Address address) {
         try {
             MyUser user = userRepository.findByUsername(username);
             if (user != null) {
@@ -64,13 +64,13 @@ public class MyUserDetailService implements UserDetailsService {
             Role role = roleRepository.findByTitle("customer");
             newUser.setRole(role);
             userRepository.save(newUser);
-            return new User(username, password, new ArrayList<>());
+            return new CustomUserDetails(newUser);
         } catch (Exception error) {
             throw error;
         }
     }
 
-    public UserDetails checkUsernamePassword(String username, String password) {
+    public CustomUserDetails checkUsernamePassword(String username, String password) {
         try {
             MyUser user = userRepository.findByUsername(username);
             if (user == null) {
@@ -80,20 +80,20 @@ public class MyUserDetailService implements UserDetailsService {
                 throw new BadCredentialsException("Password incorrect");
             }
 
-            return new User(username, password, new ArrayList<>());
+            return new CustomUserDetails(user);
         } catch (Exception e) {
             System.out.println("ERROR " + e);
             throw e;
         }
     }
 
-    public MyUser getUserById(Integer userId) {
+    public UserDetails getUserById(Integer userId) {
         try {
             Optional<MyUser> user = userRepository.findById(userId);
             if (!user.isPresent()) {
                 throw new UserIdNotFound("User with id " + userId + " not found");
             }
-            return user.get();
+            return new CustomUserDetails(user.get());
         } catch (Exception e) {
             System.out.println("ERROR " + e);
             throw e;

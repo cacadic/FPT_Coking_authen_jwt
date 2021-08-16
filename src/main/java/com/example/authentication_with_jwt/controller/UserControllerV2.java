@@ -5,7 +5,8 @@ import com.example.authentication_with_jwt.entities.Address;
 import com.example.authentication_with_jwt.entities.MyUser;
 import com.example.authentication_with_jwt.models.*;
 import com.example.authentication_with_jwt.services.AddressService;
-import com.example.authentication_with_jwt.services.JwtUtil;
+import com.example.authentication_with_jwt.services.CustomUserDetails;
+import com.example.authentication_with_jwt.services.JwtTokenProvider;
 import com.example.authentication_with_jwt.services.MyUserDetailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -28,7 +29,7 @@ public class UserControllerV2 {
     private AddressService addressService;
 
     @Autowired
-    private JwtUtil jwtUtil;
+    private JwtTokenProvider jwtTokenProvider;
 
     @GetMapping("/hello")
     public String hello() {
@@ -45,12 +46,10 @@ public class UserControllerV2 {
     public ResponseEntity<?> signup(@RequestBody SignUpRequest signupRequest) {
         try {
             Address address = addressService.getAddress(signupRequest.getWard(), signupRequest.getDistrict(), signupRequest.getCity());
-            UserDetails userDetails = userDetailService.signUp(signupRequest.getUsername(), signupRequest.getPassword(), address);
-            final String jwt = jwtUtil.generateToken(userDetails);
+            CustomUserDetails userDetails = userDetailService.signUp(signupRequest.getUsername(), signupRequest.getPassword(), address);
 
-            SignupResponsePayload payload = new SignupResponsePayload(jwt);
-            SignupResponseV2 signupResponseV2 = new SignupResponseV2(true, payload);
-            return ResponseEntity.status(200).body(signupResponseV2);
+            SignupResponse signupResponse = new SignupResponse(true);
+            return ResponseEntity.status(200).body(signupResponse);
         } catch (UserAlreadyException e) {
             return new ApiResponse<>().createResponse(new SignupApiResponsePayload("User Already exists"));
         }
@@ -60,8 +59,9 @@ public class UserControllerV2 {
     @RequestMapping(value = "/authentication", method = RequestMethod.POST)
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
-            final UserDetails userDetails = userDetailService.checkUsernamePassword(loginRequest.getUsername(), loginRequest.getPassword());
-            final String jwt = jwtUtil.generateToken(userDetails);
+            final CustomUserDetails userDetails = userDetailService.checkUsernamePassword(loginRequest.getUsername(), loginRequest.getPassword());
+
+            final String jwt = jwtTokenProvider.generateToken(userDetails);
 
             LoginResponsePayload payload = new LoginResponsePayload(jwt);
 
@@ -78,7 +78,7 @@ public class UserControllerV2 {
     @RequestMapping(value = "/information", method = RequestMethod.GET)
     public ResponseEntity<?> getUserInfor(@RequestParam Integer userId) {
         try {
-            MyUser user = this.userDetailService.getUserById(userId);
+            UserDetails user = userDetailService.getUserById(userId);
             return ResponseEntity.status(200).body(user);
         } catch (UserIdNotFound err) {
             return ResponseEntity.status(500).body(err.getMessage());
